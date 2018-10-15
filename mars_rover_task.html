@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<HTML>
+
+<HEAD>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=utf-8">
+
+<STYLE>
+	.my_input
+	{
+		padding-left: 5px;
+		margin-right: 15px;
+		margin-top: 5px;
+		width: 200px;
+	}
+</STYLE>
+
+<SCRIPT>
+	const FORWARD  = 1;
+	const BACKWARD = 0;
+	
+	var input            = 0;
+	var best_instruction = "";
+	var vectors          = []; // ignone 0 cell for convenience and beauty
+	var limit            = 0;
+	var limit_multiplier = 2;
+	var iteration_count  = 0;
+	var stop_flag        = false;
+	var max_vectors      = 5;
+	var sign             = undefined;
+	
+	// **********************************
+	// ON CLICK BUTTON
+	// **********************************
+	function processing (event)
+	{
+		if (event != undefined && event.keyCode != 13) return; // ENTER keypressed
+		
+		input            = document.getElementById("input1").value;
+		max_vectors      = document.getElementById("input2").value;
+		limit_multiplier = document.getElementById("input2").value;
+		
+		if (input == "" || input == 0)
+		{
+			log("Ошибка! Введите конечный номер блока!");
+			return;
+		}
+	
+		limit = Math.abs(input) * limit_multiplier; // set limit
+		
+		if (input > 0) sign = "+"; else sign = "-";
+		
+		log("Поиск кратчайшей инструкции для движения к блоку " + input); // clear window
+		
+		// MAIN CYCLE
+		for (let vector = 1; vector <= max_vectors; vector++)
+		{
+			vectors[vector] =
+			{
+				direction: FORWARD,
+				instruction: "",
+				value: 0,
+				speed: 1
+			}
+			
+			log ("Добавлен отрезок: " + vector);
+			compute_vectors_recursive (1);
+		}
+		
+		// FINISH
+		if (best_instruction == "")
+		{
+			log ("<B>Кратчайшая инструкция не найдена!</B>");
+		}
+		else
+		{
+			log ("<B>Кратчайшая инструкция: " + best_instruction + "</B>");
+			log ("<B>Длина инструкции: " + best_instruction.length + "</B>");
+		}
+		
+		// RESET VALUES
+		input            = 0;
+		best_instruction = "";
+		vectors          = [];
+		limit            = 0;
+	}	
+	
+	
+	// **********************************
+	// CHECKER
+	// **********************************
+	function compute_vectors_recursive (vector)
+	{
+		// RESET VECTOR
+		vectors[vector].direction   = FORWARD;
+		vectors[vector].instruction = "";
+		vectors[vector].value       = 0;
+		vectors[vector].speed       = 1;
+		
+		// TO RIGHT (+)
+		// INSTRUCTION PREFFIX (FIRST LEVEL HAS NOT PREFFIX)
+		if (vector > 1)
+		{
+			if (vectors[vector - 1].direction == FORWARD) vectors[vector].instruction = "RR"; else vectors[vector].instruction = "R";
+		}
+		
+		while (true)
+		{
+			vectors[vector].instruction += "A";
+			vectors[vector].value += vectors[vector].speed;
+			vectors[vector].speed *= 2;
+			iteration_count++;
+			
+			if (vectors[vector + 1] != undefined) compute_vectors_recursive (vector + 1);
+			
+			checker ();
+			
+			if (vectors[vector].value > limit) break;
+		}
+		
+		// RESET VECTOR
+		vectors[vector].direction   = BACKWARD;
+		vectors[vector].instruction = "R";
+		vectors[vector].value       = 0;
+		vectors[vector].speed       = 1;
+		
+		// TO LEFT (-)
+		if (vector > 1)
+		{
+			if (vectors[vector - 1].direction == BACKWARD) vectors[vector].instruction = "RR"; else vectors[vector].instruction = "R";
+		}
+		
+		while (true)
+		{
+			vectors[vector].instruction += "A";
+			vectors[vector].value += vectors[vector].speed;
+			vectors[vector].speed *= 2;
+			iteration_count++;
+			
+			if (vectors[vector + 1] != undefined) compute_vectors_recursive (vector + 1);
+			
+			checker ();
+			
+			if (vectors[vector].value > limit) break;
+		}
+
+	}
+	
+	
+	// **********************************
+	// CHECKER
+	// **********************************
+	function checker ()
+	{
+		let result      = 0;
+		let instruction = "";
+		
+		for (let a = 1; a < vectors.length; a++)
+		{
+			if (vectors[a].direction) result += vectors[a].value; else result -= vectors[a].value;
+			instruction += vectors[a].instruction;
+		}
+		
+		if (result == input)
+		{
+			if (best_instruction == "") // if first time
+			{
+				best_instruction = instruction;
+			}
+			else
+			{
+				if (best_instruction.length > instruction.length) best_instruction = instruction; // compare length
+			}
+			console.log (instruction);
+		}
+	}
+	
+	// **********************************
+	// LOG
+	// **********************************
+	function log (data)
+	{
+		document.getElementById("result_window").innerHTML += "&bull; " + data + "<BR>";
+	}
+</SCRIPT>
+</HEAD>
+
+<BODY STYLE='background: #E3EFFF; font: 100% verdana;'>
+	<DIV STYLE='width: 410px;'><B>Программа расчёта кратчайшей длины инструкции движения марсохода.</B></DIV><BR>
+	Финишный номер блока:<BR>
+	<INPUT CLASS='my_input' VALUE='0' TYPE='number' ID='input1' ONKEYPRESS='processing(event)'><BR><BR>
+	Максимальное количество отрезков пути:<BR>
+	<INPUT CLASS='my_input' VALUE='5' TYPE='number' ID='input2'><BR><BR>
+	Ограничивающий множитель финишного блока:<BR>
+	<INPUT CLASS='my_input' VALUE='2' TYPE='number' ID='input3'><BR><BR>
+	<DIV STYLE='padding: 5px; width: 450px; height: 300px; background: white; border: 1px solid #AAAAAA; overflow: auto; font: 80% verdana; white-space: nowrap;' ID='result_window'></DIV><BR>
+	<INPUT STYLE='width: 200px; cursor: pointer;' TYPE='button' ID='start' VALUE='Рассчитать' ONCLICK='processing()'><BR><BR>
+</BODY>
+</HTML>
